@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>second three.js</title>
+
+<!--librarys-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r99/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+
+<!--css setup-->
+<style>
+    body{
+        margin: 0;
+        height: 100vh;
+        }
+    canvas{
+        display: block;
+    }
+</style>
+</head>
+
+<body>
+<script type="text/javascript">
+
+    //setup THREE.js basics
+    let scene = new THREE.Scene();
+
+	let camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 2000 );
+    camera.position.set(0,0,30);
+
+    let renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setClearColor(new THREE.Color(0xccaaaa));
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild( renderer.domElement );
+    
+    //setup THREE.js Light
+    let ambientLight = new THREE.AmbientLight(0xffffff,0.1);
+    scene.add(ambientLight);
+
+    let pointLight = new THREE.PointLight(0xffffff,1,2000);
+    pointLight.position.set(15,15,30);
+    scene.add(pointLight);
+
+    //setup THREE.js Mesh
+
+    const sphereRadius = 10;
+    let sphereGeometry = new THREE.SphereGeometry(sphereRadius, 18, 19);
+    let sphereMaterial = new THREE.MeshBasicMaterial({color: 0x7777ff, wireframe: true});
+    let sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphere.visible = false;
+
+    scene.add(sphere);
+
+    let colorArray = [];
+    for(var i = 0; i < sphereGeometry.faces.length;i+=2){
+        colorArray.push(new THREE.Color());
+        colorArray[i].setHex(Math.random() * 0xffffff );
+        colorArray.push(colorArray[i]);
+    }
+
+    let faces = new THREE.Group;
+
+    sphereGeometry.faces.forEach((e,colorIndex) => {
+        let faceGeo = new THREE.Geometry();
+        faceGeo.vertices = [...e.vertexNormals];
+        //faceGeo.verticesNeedUpdate = true;
+        faceGeo.faces.push(new THREE.Face3(0,1,2));
+        //faceGeo.normalsNeedUpdate = true;
+        faceGeo.computeBoundingShpere;
+        
+        let faceMatBasic = new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity:0.5,
+            blending: THREE.NormalBlending
+        });
+        faceMatBasic.color.set(colorArray[colorIndex]);
+        
+        let faceMesh = new THREE.Mesh(faceGeo,faceMatBasic);
+        faceMesh.name='face' + colorIndex.toString();
+        faceMesh.scale.set(sphereRadius,sphereRadius,sphereRadius);
+        //important
+        faceMesh.geometry.computeFaceNormals();
+        faceMesh.geometry.computeVertexNormals();
+        
+        colorIndex++;
+
+        faces.add(faceMesh);
+    });
+    scene.add(faces);
+
+    //
+
+    let points = new THREE.Group;
+    let pointMat = new THREE.PointsMaterial({
+        color:0xffffff
+        });
+    let pointGeo = new THREE.SphereGeometry();
+    for(let i = 0 ; i < sphere.geometry.vertices.length ; i ++){
+        let point = new THREE.Points(pointGeo,pointMat);
+        point.position.x = sphere.geometry.vertices[i].x *20;
+        point.position.y = sphere.geometry.vertices[i].y *20;
+        point.position.z = sphere.geometry.vertices[i].z *20;
+        points.add(point);
+    }
+    scene.add(points);
+
+    //raycaster
+
+    let raycaster = new THREE.Raycaster();
+    let mouse = new THREE.Vector2();
+    let intersects = new THREE.Mesh;
+
+    function mouseHover(e){
+        e.preventDefault();
+
+        mouse.x = ( e.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+        mouse.y = - ( e.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+
+        raycaster.setFromCamera(mouse,camera);
+
+        intersects = raycaster.intersectObjects( faces.children,true);
+        for(let i = 0 ; i < intersects.length ; i++){
+            console.log(intersects[i]);
+            intersects[i].object.material.color.set(0,0,0);
+        }
+    }
+
+
+    window.addEventListener('click',mouseHover);
+
+
+    //setup stats.js
+    let stats = new Stats();
+    stats.setMode(0); // 0: fps, 1: ms
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+    document.body.appendChild(stats.domElement);
+
+    //setup dat.gui.js
+    let guiControls = new function(){
+        this.numberOfMeshes = faces.children.length;
+        this.randomClearColor = () => {
+            renderer.setClearColor('#'+Math.floor(Math.random()*0xFFFFFF).toString(16));
+        }
+        this.resetClearColor = () => {
+            renderer.setClearColor(new THREE.Color(0xccaaaa));
+        }
+        this.ambientLightIntensity = 0.1;
+        this.pointLightIntensity = 1;
+    }
+
+    let gui = new dat.GUI();
+    gui.add(guiControls,'numberOfMeshes').listen();
+    gui.add(guiControls,'randomClearColor');
+    gui.add(guiControls,'resetClearColor');
+    gui.add(guiControls,'ambientLightIntensity',0,1).onChange( e => ambientLight.intensity = e);
+    gui.add(guiControls,'pointLightIntensity',0,1).onChange( e => pointLight.intensity = e);
+
+    //animate & update
+    function animate() {
+        //THREE.js
+        renderer.render( scene, camera );
+        faces.rotation.y += 0.003;
+        points.rotation.y += 0.005;
+        requestAnimationFrame( animate );
+        //stats.js
+        stats.update();
+        //
+        //console.log(faces);
+        }
+    animate();
+
+    //EventListener
+    window.addEventListener('resize', () => {
+        renderer.setSize(window.innerWidth,window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        }
+    )    
+
+
+
+</script>
+</body>
+
+</html>
