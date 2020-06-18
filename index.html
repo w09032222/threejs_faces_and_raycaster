@@ -33,24 +33,24 @@
 
     let renderer = new THREE.WebGLRenderer({antialias: true});
 	renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.setClearColor(new THREE.Color(0xccaaaa));
+    renderer.setClearColor(new THREE.Color(0xfedfe1));
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild( renderer.domElement );
     
     //setup THREE.js Light
-    let ambientLight = new THREE.AmbientLight(0xffffff,0.1);
-    scene.add(ambientLight);
+    // let ambientLight = new THREE.AmbientLight(0xffffff,0.1);
+    // scene.add(ambientLight);
 
-    let pointLight = new THREE.PointLight(0xffffff,1,2000);
-    pointLight.position.set(15,15,30);
-    scene.add(pointLight);
+    // let pointLight = new THREE.PointLight(0xffffff,1,2000);
+    // pointLight.position.set(15,15,30);
+    // scene.add(pointLight);
 
     //setup THREE.js Mesh
 
     const sphereRadius = 10;
     let sphereGeometry = new THREE.SphereGeometry(sphereRadius, 18, 19);
-    let sphereMaterial = new THREE.MeshBasicMaterial({color: 0x7777ff, wireframe: true});
+    let sphereMaterial = new THREE.MeshBasicMaterial({color: 0xfedfe1, wireframe: true});
     let sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphere.visible = false;
 
@@ -75,7 +75,7 @@
         
         let faceMatBasic = new THREE.MeshBasicMaterial({
             transparent: true,
-            opacity:0.5,
+            opacity:0.75,
             blending: THREE.NormalBlending
         });
         faceMatBasic.color.set(colorArray[colorIndex]);
@@ -115,23 +115,21 @@
     let mouse = new THREE.Vector2();
     let intersects = new THREE.Mesh;
 
-    function mouseHover(e){
-        e.preventDefault();
+    let drawMode = 'ClickMode';
 
+    function mouseEvent(e){
+        e.preventDefault();
         mouse.x = ( e.clientX / renderer.domElement.clientWidth ) * 2 - 1;
         mouse.y = - ( e.clientY / renderer.domElement.clientHeight ) * 2 + 1;
-
         raycaster.setFromCamera(mouse,camera);
-
         intersects = raycaster.intersectObjects( faces.children,true);
         for(let i = 0 ; i < intersects.length ; i++){
-            console.log(intersects[i]);
+            //console.log(intersects[i]);
             intersects[i].object.material.color.set(0,0,0);
         }
     }
 
-
-    window.addEventListener('click',mouseHover);
+    window.addEventListener('click',mouseEvent);
 
 
     //setup stats.js
@@ -145,22 +143,34 @@
     //setup dat.gui.js
     let guiControls = new function(){
         this.numberOfMeshes = faces.children.length;
-        this.randomClearColor = () => {
-            renderer.setClearColor('#'+Math.floor(Math.random()*0xFFFFFF).toString(16));
-        }
-        this.resetClearColor = () => {
-            renderer.setClearColor(new THREE.Color(0xccaaaa));
-        }
-        this.ambientLightIntensity = 0.1;
-        this.pointLightIntensity = 1;
+        // this.randomClearColor = () => {
+        //     renderer.setClearColor('#'+Math.floor(Math.random()*0xFFFFFF).toString(16));
+        // }
+        // this.resetClearColor = () => {
+        //     renderer.setClearColor(new THREE.Color(0xccaaaa));
+        // }
+        // this.ambientLightIntensity = 0.1;
+        //this.pointLightIntensity = 1;
+        this.CurrentDrawMode = 'ClickMode';
+        this.ClickMode = () => {drawMode = 'ClickMode';
+            window.removeEventListener('mousemove',mouseEvent);
+            window.addEventListener('click',mouseEvent);
+            }
+        this.HoverMode = () => {drawMode = 'HoverMode';
+            window.removeEventListener('click',mouseEvent);
+            window.addEventListener('mousemove',mouseEvent);
+            }
     }
 
     let gui = new dat.GUI();
     gui.add(guiControls,'numberOfMeshes').listen();
-    gui.add(guiControls,'randomClearColor');
-    gui.add(guiControls,'resetClearColor');
-    gui.add(guiControls,'ambientLightIntensity',0,1).onChange( e => ambientLight.intensity = e);
-    gui.add(guiControls,'pointLightIntensity',0,1).onChange( e => pointLight.intensity = e);
+    // gui.add(guiControls,'randomClearColor');
+    // gui.add(guiControls,'resetClearColor');
+    // gui.add(guiControls,'ambientLightIntensity',0,1).onChange( e => ambientLight.intensity = e);
+    //gui.add(guiControls,'pointLightIntensity',0,1).onChange( e => pointLight.intensity = e);
+    gui.add(guiControls,'CurrentDrawMode').listen();
+    gui.add(guiControls,'ClickMode');
+    gui.add(guiControls,'HoverMode');
 
     //animate & update
     function animate() {
@@ -171,7 +181,8 @@
         requestAnimationFrame( animate );
         //stats.js
         stats.update();
-        //
+        //dat.gui.js
+        guiControls.CurrentDrawMode = drawMode;
         //console.log(faces);
         }
     animate();
