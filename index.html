@@ -33,7 +33,7 @@
 
     let renderer = new THREE.WebGLRenderer({antialias: true});
 	renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.setClearColor(new THREE.Color(0xfedfe1));
+    renderer.setClearColor(new THREE.Color(0xF8C3CD));//0xF8C3CD  0x191616
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild( renderer.domElement );
@@ -176,7 +176,7 @@
 
     //setup dat.gui.js
     let guiControls = new function(){
-        this.numberOfMeshes = faces.children.length;
+        //this.numberOfMeshes = faces.children.length;
         // this.randomClearColor = () => {
         //     renderer.setClearColor('#'+Math.floor(Math.random()*0xFFFFFF).toString(16));
         // }
@@ -198,18 +198,28 @@
             window.removeEventListener('click',mouseEvent);
             window.addEventListener('mousemove',mouseEvent);
             }
+        this.Reset = () => {
+            for(var i = 0; i < sphereGeometry.faces.length;i++){
+                colorArray.push(new THREE.Color());
+                colorArray[i].setHex(0xdb4d6d);
+                colorArray[i].offsetHSL(Math.random()*0.1,Math.random()*0.1,-1*Math.random()*0.1);
+                //colorArray.push(colorArray[i]);
+                faces.children[i].material.color = colorArray[i];
+            }
+        }
     }
 
     let gui = new dat.GUI();
-    gui.add(guiControls,'numberOfMeshes').listen();
-    // gui.add(guiControls,'randomClearColor');
-    // gui.add(guiControls,'resetClearColor');
-    // gui.add(guiControls,'ambientLightIntensity',0,1).onChange( e => ambientLight.intensity = e);
+    //gui.add(guiControls,'numberOfMeshes').listen();
+    //gui.add(guiControls,'randomClearColor');
+    //gui.add(guiControls,'resetClearColor');
+    //gui.add(guiControls,'ambientLightIntensity',0,1).onChange( e => ambientLight.intensity = e);
     //gui.add(guiControls,'pointLightIntensity',0,1).onChange( e => pointLight.intensity = e);
     gui.add(guiControls,'CurrentDrawMode').listen();
     gui.add(guiControls,'ClickMode');
     gui.add(guiControls,'HoverMode');
     gui.add(guiControls,'HighLightMode');
+    gui.add(guiControls,'Reset');
 
     //animate & update
     function animate() {
