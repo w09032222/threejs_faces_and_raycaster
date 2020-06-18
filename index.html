@@ -57,10 +57,11 @@
     scene.add(sphere);
 
     let colorArray = [];
-    for(var i = 0; i < sphereGeometry.faces.length;i+=2){
+    for(var i = 0; i < sphereGeometry.faces.length;i++){
         colorArray.push(new THREE.Color());
-        colorArray[i].setHex(Math.random() * 0xffffff );
-        colorArray.push(colorArray[i]);
+        colorArray[i].setHex(0xdb4d6d);
+        colorArray[i].offsetHSL(Math.random()*0.1,Math.random()*0.1,-1*Math.random()*0.1);
+        //colorArray.push(colorArray[i]);
     }
 
     let faces = new THREE.Group;
@@ -109,11 +110,24 @@
     }
     scene.add(points);
 
+    //vertices to veiw rendered portion 
+    //(do again in resize eventlistener)
+
+    let vFOV = camera.fov * Math.PI / 180; // convert vertical fov to radians
+    // visible height/width in distance (camera to sphere)
+    let vHeight = 2 * Math.tan( vFOV / 2 ) * (camera.position.z - sphere.position.z);
+    let vWidth = vHeight * camera.aspect;
+    let vSphereHeightPortion = sphereRadius / vWidth;   //portion of view
+    let vSphereWidthPortion = sphereRadius / vHeight;   //portion of view
+    //console.log(vWidth);
+
     //raycaster
 
     let raycaster = new THREE.Raycaster();
     let mouse = new THREE.Vector2();
     let intersects = new THREE.Mesh;
+    let INTERSECTED = null;
+    let INTERSECTED_COLOR = new THREE.Color;
 
     let drawMode = 'ClickMode';
 
@@ -123,12 +137,32 @@
         mouse.y = - ( e.clientY / renderer.domElement.clientHeight ) * 2 + 1;
         raycaster.setFromCamera(mouse,camera);
         intersects = raycaster.intersectObjects( faces.children,true);
-        for(let i = 0 ; i < intersects.length ; i++){
-            //console.log(intersects[i]);
-            intersects[i].object.material.color.set(0,0,0);
+
+        if(drawMode == 'HighLightMode'){
+            if(intersects[0]){                   //check if raycaster grab a object
+                if(INTERSECTED == null){         //if INTERSECTED is null, grab intersect for debug
+                    INTERSECTED = intersects[0].object;
+                }
+                if(INTERSECTED_COLOR != intersects[0].object.material.color){   //copy intersect's color
+                    INTERSECTED_COLOR = intersects[0].object.material.color.getHex();
+                }
+                if(INTERSECTED != intersects[0].object){    //if intersect new object, undo INTERSETED
+                    INTERSECTED.material.color.set(INTERSECTED_COLOR);
+                    INTERSECTED.scale.set(sphereRadius,sphereRadius,sphereRadius);
+                }
+                intersects[0].object.material.color.setHex(0xfc3015);   //while intersecting, change color
+                intersects[0].object.scale.set(sphereRadius+7,sphereRadius+7,sphereRadius+7);
+                INTERSECTED = intersects[0].object;                     //save intersect for undo
+            }else if(INTERSECTED != null && Math.pow(mouse.x,2)+ Math.pow(mouse.y,2) > Math.pow(vSphereWidthPortion,2)+Math.pow(vSphereHeightPortion,2)){   //if mouse left sphere
+                INTERSECTED.scale.set(sphereRadius,sphereRadius,sphereRadius);
+                INTERSECTED.material.color.set(INTERSECTED_COLOR);
+            }
+        }else{
+            if(intersects[0]){
+                intersects[0].object.material.color.setHex(0xFEDFE1);
+            }
         }
     }
-
     window.addEventListener('click',mouseEvent);
 
 
@@ -160,6 +194,10 @@
             window.removeEventListener('click',mouseEvent);
             window.addEventListener('mousemove',mouseEvent);
             }
+        this.HighLightMode = () => {drawMode = 'HighLightMode';
+            window.removeEventListener('click',mouseEvent);
+            window.addEventListener('mousemove',mouseEvent);
+            }
     }
 
     let gui = new dat.GUI();
@@ -171,6 +209,7 @@
     gui.add(guiControls,'CurrentDrawMode').listen();
     gui.add(guiControls,'ClickMode');
     gui.add(guiControls,'HoverMode');
+    gui.add(guiControls,'HighLightMode');
 
     //animate & update
     function animate() {
@@ -183,15 +222,23 @@
         stats.update();
         //dat.gui.js
         guiControls.CurrentDrawMode = drawMode;
-        //console.log(faces);
         }
     animate();
 
     //EventListener
+
     window.addEventListener('resize', () => {
         renderer.setSize(window.innerWidth,window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
+
+    //vertices to veiw rendered portion (do again in resize eventlistener)
+    vFOV = camera.fov * Math.PI / 180; // convert vertical fov to radians
+    // visible height/width in distance (camera to sphere)
+    vHeight = 2 * Math.tan( vFOV / 2 ) * (camera.position.z - sphere.position.z); 
+    vWidth = vHeight * camera.aspect;
+    vSphereHeightPortion = sphereRadius / vWidth;   //portion of view
+    vSphereWidthPortion = sphereRadius / vHeight;   //portion of view
         }
     )    
 
